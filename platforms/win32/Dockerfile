@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bookworm
 LABEL maintainer="Lovell Fuller <npm@lovell.info>"
 
 ## Copyright 2017 Lovell Fuller and others.
