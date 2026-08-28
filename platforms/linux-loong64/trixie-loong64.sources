@@ -1,0 +1,13 @@
+Types: deb
+# http://mirrors.loong64.com/debian
+URIs: http://mirrors.loong64.com/debian
+Suites: trixie trixie-updates
+Components: main
+# Signed-By: /usr/share/keyrings/debian-loong64-non-official-archive-keyring.pgp
+
+Types: deb
+# http://mirrors.loong64.com/debian-security
+URIs: http://mirrors.loong64.com/debian-security
+Suites: trixie-security
+Components: main
+# Signed-By: /usr/share/keyrings/debian-loong64-non-official-archive-keyring.pgp

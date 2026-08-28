@@ -30,7 +30,7 @@ jobs:
       contents: read
     name: build-${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
-    needs: check-latest-versions
+    # needs: check-latest-versions
     strategy:
       fail-fast: false
       matrix:
@@ -41,6 +41,8 @@ jobs:
             platform: 'linux-armv6'
           - os: 'ubuntu-24.04'
             platform: 'linuxmusl-x64'
+          - os: 'ubuntu-24.04'
+            platform: 'linux-loong64'
           - os: 'ubuntu-24.04'
             platform: 'linux-ppc64le'
           - os: 'ubuntu-24.04'
@@ -100,6 +102,13 @@ jobs:
           merge-multiple: true
       - name: Populate npm workspace
         run: ./populate-npm-workspace.sh
+      - name: Prepare publish
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          find npm/ -type f -name package.json -exec sed -i 's#"name": "@img/#"name": "@img-loong64/#g' {} \;
+          find npm/ -type f -name package.json -exec sed -i 's#github.com/lovell#github.com/loong64#g' {} \;
       - name: Create npm workspace tarball
         run: tar -vcaf npm-workspace.tar.xz -C npm .
       - name: Generate release notes

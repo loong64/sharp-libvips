@@ -11,6 +11,7 @@
     "linux-arm64",
     "linuxmusl-arm64",
     "linuxmusl-x64",
+    "linux-loong64",
     "linux-ppc64",
     "linux-riscv64",
     "linux-s390x",
