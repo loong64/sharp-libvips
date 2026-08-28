@@ -1,0 +1,228 @@
+From c3ef88b2d1876f824f84d2b80b2cf816d2f7d01e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E5=90=B4=E5=B0=8F=E7=99=BD?= <296015668@qq.com>
+Date: Thu, 27 Aug 2026 17:39:14 +0800
+Subject: [PATCH] feat: add loongarch64 platform support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: 吴小白 <296015668@qq.com>
+---
+ .github/workflows/ci.yml                      |  9 +++
+ build.sh                                      |  3 +-
+ npm/package.json                              |  1 +
+ platforms/linux-loong64/Dockerfile            | 62 +++++++++++++++++++
+ platforms/linux-loong64/Toolchain.cmake       | 15 +++++
+ platforms/linux-loong64/meson.ini             | 28 +++++++++
+ .../trixie-loong64.sources\342\200\216"       | 13 ++++
+ 7 files changed, 130 insertions(+), 1 deletion(-)
+ create mode 100644 platforms/linux-loong64/Dockerfile
+ create mode 100644 platforms/linux-loong64/Toolchain.cmake
+ create mode 100644 platforms/linux-loong64/meson.ini
+ create mode 100644 "platforms/linux-loong64/trixie-loong64.sources\342\200\216"
+
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 24b2a6b..66e8f9d 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -41,6 +41,8 @@ jobs:
+             platform: 'linux-armv6'
+           - os: 'ubuntu-24.04'
+             platform: 'linuxmusl-x64'
++          - os: 'ubuntu-24.04'
++            platform: 'linux-loong64'
+           - os: 'ubuntu-24.04'
+             platform: 'linux-ppc64le'
+           - os: 'ubuntu-24.04'
+@@ -100,6 +102,13 @@ jobs:
+           merge-multiple: true
+       - name: Populate npm workspace
+         run: ./populate-npm-workspace.sh
++      - name: Prepare publish
++        env:
++          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
++        run: |
++          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
++          find npm/ -type f -name package.json -exec sed -i 's#"name": "@img/#"name": "@img-loong64/#g' {} \;
++          find npm/ -type f -name package.json -exec sed -i 's#github.com/lovell#github.com/loong64#g' {} \;
+       - name: Create npm workspace tarball
+         run: tar -vcaf npm-workspace.tar.xz -C npm .
+       - name: Generate release notes
+diff --git a/build.sh b/build.sh
+index eca5b7f..882db7f 100755
+--- a/build.sh
++++ b/build.sh
+@@ -21,6 +21,7 @@ if [ $# -lt 1 ]; then
+   echo "- linux-armv6"
+   echo "- linux-arm64v8"
+   echo "- linuxmusl-arm64v8"
++  echo "- linux-loong64"
+   echo "- linux-ppc64le"
+   echo "- linux-riscv64"
+   echo "- linux-s390x"
+@@ -92,7 +93,7 @@ for flavour in win32-ia32 win32-x64 win32-arm64v8; do
+ done
+ 
+ # Linux (x64, ARMv6, ARM64v8)
+-for flavour in linux-x64 linuxmusl-x64 linux-armv6 linux-arm64v8 linuxmusl-arm64v8 linux-ppc64le linux-riscv64 linux-s390x; do
++for flavour in linux-x64 linuxmusl-x64 linux-armv6 linux-arm64v8 linuxmusl-arm64v8 linux-loong64 linux-ppc64le linux-riscv64 linux-s390x; do
+   if [ $PLATFORM = "all" ] || [ $PLATFORM = $flavour ]; then
+     echo "Building $flavour..."
+     docker build --pull -t vips-dev-$flavour platforms/$flavour
+diff --git a/npm/package.json b/npm/package.json
+index d6317bd..0845c98 100644
+--- a/npm/package.json
++++ b/npm/package.json
+@@ -11,6 +11,7 @@
+     "linux-arm64",
+     "linuxmusl-arm64",
+     "linuxmusl-x64",
++    "linux-loong64",
+     "linux-ppc64",
+     "linux-riscv64",
+     "linux-s390x",
+diff --git a/platforms/linux-loong64/Dockerfile b/platforms/linux-loong64/Dockerfile
+new file mode 100644
+index 0000000..fa4ffcb
+--- /dev/null
++++ b/platforms/linux-loong64/Dockerfile
+@@ -0,0 +1,62 @@
++FROM debian:trixie
++LABEL maintainer="Lovell Fuller <npm@lovell.info>"
++
++## Copyright 2017 Lovell Fuller and others.
++## SPDX-License-Identifier: Apache-2.0
++
++# Create Debian 13 (glibc 2.41) container suitable for cross-compiling Linux LoongArch 64-bit binaries
++
++# Path settings
++ENV \
++  RUSTUP_HOME="/usr/local/rustup" \
++  CARGO_HOME="/usr/local/cargo" \
++  PATH="/usr/local/cargo/bin:/root/.local/bin:$PATH"
++
++COPY trixie-loong64.sources /etc/apt/sources.list.d/trixie-loong64.sources
++RUN \
++  dpkg --add-architecture loong64 && \
++  apt-get update -o Acquire::AllowInsecureRepositories=true && \
++  apt-get install -y --allow-unauthenticated curl debian-loong64-non-official-archive-keyring && \
++  sed -i 's/# Signed-By/Signed-By/g' /etc/apt/sources.list.d/trixie-loong64.sources
++
++# Build dependencies
++RUN \
++  apt-get update && \
++  apt-get install -y \
++    autoconf \
++    autopoint \
++    cmake \
++    g++-loongarch64-linux-gnu \
++    gettext \
++    git \
++    gperf \
++    jq \
++    libcurl4-openssl-dev \
++    libssl-dev \
++    libtool \
++    ninja-build \
++    pipx \
++    pkgconf \
++    pkgconf:loong64 \
++    && \
++  curl https://sh.rustup.rs -sSf | sh -s -- -y \
++    --no-modify-path \
++    --profile minimal \
++    --target loongarch64-unknown-linux-gnu \
++    --default-toolchain nightly \
++    && \
++  cargo install cargo-c --locked && \
++  pipx install meson
++
++# Compiler settings
++ENV \
++  PKG_CONFIG="loongarch64-linux-gnu-pkg-config --static" \
++  PLATFORM="linux-loong64" \
++  CHOST="loongarch64-linux-gnu" \
++  RUST_TARGET="loongarch64-unknown-linux-gnu" \
++  FLAGS="" \
++  RUSTFLAGS="-Zlocation-detail=none -Zfmt-debug=none" \
++  MESON="--cross-file=/root/meson.ini"
++
++COPY Toolchain.cmake /root/
++COPY meson.ini /root/
+diff --git a/platforms/linux-loong64/Toolchain.cmake b/platforms/linux-loong64/Toolchain.cmake
+new file mode 100644
+index 0000000..7d50db5
+--- /dev/null
++++ b/platforms/linux-loong64/Toolchain.cmake
+@@ -0,0 +1,15 @@
++set(CMAKE_SYSTEM_NAME Linux)
++set(CMAKE_SYSTEM_VERSION 1)
++set(CMAKE_SYSTEM_PROCESSOR loongarch64)
++
++SET(CMAKE_C_COMPILER loongarch64-linux-gnu-gcc)
++SET(CMAKE_CXX_COMPILER loongarch64-linux-gnu-g++)
++SET(CMAKE_AR loongarch64-linux-gnu-gcc-ar)
++SET(CMAKE_STRIP loongarch64-linux-gnu-gcc-strip)
++SET(CMAKE_RANLIB loongarch64-linux-gnu-gcc-ranlib)
++
++set(CMAKE_FIND_ROOT_PATH $ENV{TARGET_SYSROOT})
++set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
++set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
++set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
++set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+diff --git a/platforms/linux-loong64/meson.ini b/platforms/linux-loong64/meson.ini
+new file mode 100644
+index 0000000..81df8f1
+--- /dev/null
++++ b/platforms/linux-loong64/meson.ini
+@@ -0,0 +1,28 @@
++[host_machine]
++system = 'linux'
++cpu_family = 'loongarch64'
++cpu = 'loongarch64'
++endian = 'little'
++
++[binaries]
++c = 'loongarch64-linux-gnu-gcc'
++cpp = 'loongarch64-linux-gnu-g++'
++ar = 'loongarch64-linux-gnu-gcc-ar'
++nm = 'loongarch64-linux-gnu-gcc-nm'
++ld = 'loongarch64-linux-gnu-gcc-ld'
++strip = 'loongarch64-linux-gnu-strip'
++ranlib = 'loongarch64-linux-gnu-gcc-ranlib'
++
++[properties]
++# https://docs.gtk.org/glib/cross-compiling.html#cross-properties
++have_c99_vsnprintf = true
++have_c99_snprintf = true
++have_unix98_printf = true
++
++[built-in options]
++libdir = 'lib'
++datadir = '/usr/share'
++localedir = '/usr/share/locale'
++sysconfdir = '/etc'
++localstatedir = '/var'
++wrap_mode = 'nofallback'
+diff --git "a/platforms/linux-loong64/trixie-loong64.sources\342\200\216" "b/platforms/linux-loong64/trixie-loong64.sources\342\200\216"
+new file mode 100644
+index 0000000..b856348
+--- /dev/null
++++ "b/platforms/linux-loong64/trixie-loong64.sources\342\200\216"
+@@ -0,0 +1,13 @@
++Types: deb
++# http://mirrors.loong64.com/debian
++URIs: http://mirrors.loong64.com/debian
++Suites: trixie trixie-updates
++Components: main
++# Signed-By: /usr/share/keyrings/debian-loong64-non-official-archive-keyring.pgp
++
++Types: deb
++# http://mirrors.loong64.com/debian-security
++URIs: http://mirrors.loong64.com/debian-security
++Suites: trixie-security
++Components: main
++# Signed-By: /usr/share/keyrings/debian-loong64-non-official-archive-keyring.pgp
+-- 
+2.51.0.windows.1
+
