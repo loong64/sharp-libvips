@@ -59,7 +59,8 @@ jobs:
           sed -i 's/riscv64/loong64/g' npm/linux-loong64/package.json
           sed -i 's/RISC-V/LoongArch/g' npm/linux-loong64/package.json
 
-          git commit -am "Add loongarch64 support"
+          git add .
+          git commit -m "feat: add loongarch64 platform support"
           git push origin loong64-${version} --force
 
       - name: Push Tag
