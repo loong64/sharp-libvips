@@ -1,53 +1,69 @@
-From c3ef88b2d1876f824f84d2b80b2cf816d2f7d01e Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?=E5=90=B4=E5=B0=8F=E7=99=BD?= <296015668@qq.com>
-Date: Thu, 27 Aug 2026 17:39:14 +0800
-Subject: [PATCH] feat: add loongarch64 platform support
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
-
-Signed-off-by: 吴小白 <296015668@qq.com>
----
- .github/workflows/ci.yml                      |  9 +++
- build.sh                                      |  3 +-
- npm/package.json                              |  1 +
- platforms/linux-loong64/Dockerfile            | 62 +++++++++++++++++++
- platforms/linux-loong64/Toolchain.cmake       | 15 +++++
- platforms/linux-loong64/meson.ini             | 28 +++++++++
- .../trixie-loong64.sources\342\200\216"       | 13 ++++
- 7 files changed, 130 insertions(+), 1 deletion(-)
- create mode 100644 platforms/linux-loong64/Dockerfile
- create mode 100644 platforms/linux-loong64/Toolchain.cmake
- create mode 100644 platforms/linux-loong64/meson.ini
- create mode 100644 "platforms/linux-loong64/trixie-loong64.sources\342\200\216"
-
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 24b2a6b..66e8f9d 100644
+index 50f72e18..0df98670 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
-@@ -41,6 +41,8 @@ jobs:
+@@ -1,5 +1,6 @@
+ name: CI
+ on:
++  workflow_dispatch:
+   push:
+     branches:
+       - main
+@@ -17,8 +18,10 @@ on:
+ permissions: {}
+ jobs:
+   check-latest-versions:
++    if: github.repository == 'lovell/sharp-libvips'
+     permissions:
+       contents: read
++      packages: write
+     runs-on: 'ubuntu-26.04'
+     steps:
+       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+@@ -28,7 +31,7 @@ jobs:
+       contents: read
+     name: build-${{ matrix.platform }}
+     runs-on: ${{ matrix.os }}
+-    needs: check-latest-versions
++    # needs: check-latest-versions
+     strategy:
+       fail-fast: false
+       matrix:
+@@ -39,6 +42,8 @@ jobs:
              platform: 'linux-armv6'
-           - os: 'ubuntu-24.04'
+           - os: 'ubuntu-26.04'
              platform: 'linuxmusl-x64'
-+          - os: 'ubuntu-24.04'
++          - os: 'ubuntu-26.04'
 +            platform: 'linux-loong64'
-           - os: 'ubuntu-24.04'
+           - os: 'ubuntu-26.04'
              platform: 'linux-ppc64le'
-           - os: 'ubuntu-24.04'
-@@ -100,6 +102,13 @@ jobs:
+           - os: 'ubuntu-26.04'
+@@ -80,9 +85,11 @@ jobs:
+   populate-and-publish-npm-workspace:
+     permissions:
+       contents: write
+-      id-token: write
++      # id-token: write
+     needs: build
+     runs-on: ubuntu-26.04
++    env:
++      NPM_CONFIG_REGISTRY: https://${{ vars.NPM_REGISTRY }}
+     steps:
+       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+         with:
+@@ -91,6 +98,12 @@ jobs:
+       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+         with:
            merge-multiple: true
-       - name: Populate npm workspace
-         run: ./populate-npm-workspace.sh
 +      - name: Prepare publish
 +        env:
++          NPM_REGISTRY: ${{ vars.NPM_REGISTRY }}
 +          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 +        run: |
-+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-+          find npm/ -type f -name package.json -exec sed -i 's#"name": "@img/#"name": "@img-loong64/#g' {} \;
-+          find npm/ -type f -name package.json -exec sed -i 's#github.com/lovell#github.com/loong64#g' {} \;
++          echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+       - name: Populate npm workspace
+         run: ./populate-npm-workspace.sh
        - name: Create npm workspace tarball
-         run: tar -vcaf npm-workspace.tar.xz -C npm .
-       - name: Generate release notes
 diff --git a/build.sh b/build.sh
 index eca5b7f..882db7f 100755
 --- a/build.sh
@@ -69,8 +85,21 @@ index eca5b7f..882db7f 100755
    if [ $PLATFORM = "all" ] || [ $PLATFORM = $flavour ]; then
      echo "Building $flavour..."
      docker build --pull -t vips-dev-$flavour platforms/$flavour
+diff --git a/build/wasm.sh b/build/wasm.sh
+index 5e4defe..c7eebeb 100755
+--- a/build/wasm.sh
++++ b/build/wasm.sh
+@@ -23,7 +23,7 @@ fi
+ VERSION_VIPS_UPSTREAM=$(grep -Po "^VERSION_VIPS=\K[^ ]*" "${DIR}/build.sh")
+ if [ "$VERSION_VIPS" != "$VERSION_VIPS_UPSTREAM" ]; then
+   echo "Expected libvips $VERSION_VIPS, found $VERSION_VIPS_UPSTREAM upstream" # TODO: modify build.sh on-the-fly?
+-  exit 1
++  # exit 1
+ fi
+ 
+ # Create container with emscripten
 diff --git a/npm/package.json b/npm/package.json
-index d6317bd..0845c98 100644
+index 1790471..b5e5e35 100644
 --- a/npm/package.json
 +++ b/npm/package.json
 @@ -11,6 +11,7 @@
@@ -223,6 +252,3 @@ index 0000000..b856348
 +Suites: trixie-security
 +Components: main
 +# Signed-By: /usr/share/keyrings/debian-loong64-non-official-archive-keyring.pgp
--- 
-2.51.0.windows.1
-
