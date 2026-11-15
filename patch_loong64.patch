@@ -65,7 +65,7 @@ index 50f72e18..0df98670 100644
          run: ./populate-npm-workspace.sh
        - name: Create npm workspace tarball
 diff --git a/build.sh b/build.sh
-index eca5b7f..882db7f 100755
+index eca5b7f0..882db7f9 100755
 --- a/build.sh
 +++ b/build.sh
 @@ -21,6 +21,7 @@ if [ $# -lt 1 ]; then
@@ -86,7 +86,7 @@ index eca5b7f..882db7f 100755
      echo "Building $flavour..."
      docker build --pull -t vips-dev-$flavour platforms/$flavour
 diff --git a/build/wasm.sh b/build/wasm.sh
-index 5e4defe..c7eebeb 100755
+index 5e4defe9..c7eebeb5 100755
 --- a/build/wasm.sh
 +++ b/build/wasm.sh
 @@ -23,7 +23,7 @@ fi
@@ -99,7 +99,7 @@ index 5e4defe..c7eebeb 100755
  
  # Create container with emscripten
 diff --git a/npm/package.json b/npm/package.json
-index 1790471..b5e5e35 100644
+index 17904712..b5e5e355 100644
 --- a/npm/package.json
 +++ b/npm/package.json
 @@ -11,6 +11,7 @@
@@ -112,7 +112,7 @@ index 1790471..b5e5e35 100644
      "linux-s390x",
 diff --git a/platforms/linux-loong64/Dockerfile b/platforms/linux-loong64/Dockerfile
 new file mode 100644
-index 0000000..fa4ffcb
+index 00000000..fa4ffcbb
 --- /dev/null
 +++ b/platforms/linux-loong64/Dockerfile
 @@ -0,0 +1,62 @@
@@ -180,7 +180,7 @@ index 0000000..fa4ffcb
 +COPY meson.ini /root/
 diff --git a/platforms/linux-loong64/Toolchain.cmake b/platforms/linux-loong64/Toolchain.cmake
 new file mode 100644
-index 0000000..7d50db5
+index 00000000..7d50db50
 --- /dev/null
 +++ b/platforms/linux-loong64/Toolchain.cmake
 @@ -0,0 +1,15 @@
@@ -201,7 +201,7 @@ index 0000000..7d50db5
 +set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 diff --git a/platforms/linux-loong64/meson.ini b/platforms/linux-loong64/meson.ini
 new file mode 100644
-index 0000000..81df8f1
+index 00000000..81df8f1d
 --- /dev/null
 +++ b/platforms/linux-loong64/meson.ini
 @@ -0,0 +1,28 @@
@@ -233,11 +233,11 @@ index 0000000..81df8f1
 +sysconfdir = '/etc'
 +localstatedir = '/var'
 +wrap_mode = 'nofallback'
-diff --git "a/platforms/linux-loong64/trixie-loong64.sources\342\200\216" "b/platforms/linux-loong64/trixie-loong64.sources\342\200\216"
+diff --git a/platforms/linux-loong64/trixie-loong64.sources b/platforms/linux-loong64/trixie-loong64.sources
 new file mode 100644
-index 0000000..b856348
+index 00000000..b8563485
 --- /dev/null
-+++ "b/platforms/linux-loong64/trixie-loong64.sources\342\200\216"
++++ b/platforms/linux-loong64/trixie-loong64.sources
 @@ -0,0 +1,13 @@
 +Types: deb
 +# http://mirrors.loong64.com/debian
