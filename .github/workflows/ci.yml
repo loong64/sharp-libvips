@@ -93,7 +93,7 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     env:
-      NPM_CONFIG_REGISTRY: https://${{ vars.NPM_REGISTRY }}
+      NPM_CONFIG_REGISTRY: https://${{ vars.LOONGDOTJS_NPM_REGISTRY }}
     steps:
       - name: Install Node.js
         uses: actions/setup-node@v6
@@ -107,8 +107,8 @@ jobs:
           merge-multiple: true
       - name: Prepare publish
         env:
-          NPM_REGISTRY: ${{ vars.NPM_REGISTRY }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_REGISTRY: ${{ vars.LOONGDOTJS_NPM_REGISTRY }}
+          NPM_TOKEN: ${{ secrets.LOONGDOTJS_NPM_TOKEN }}
         run: |
           echo "//${NPM_REGISTRY}/:_authToken=${NPM_TOKEN}" > ~/.npmrc
       - name: Populate npm workspace
